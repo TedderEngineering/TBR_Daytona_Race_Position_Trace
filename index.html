@@ -7,13 +7,16 @@
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--bg:#0b0b18;--card:#12122a;--bdr:#1e1e38;--txt:#e0e0e8;--mut:#6b6b88;--dim:#44445a}
-  body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
   .ctr{max-width:1100px;margin:0 auto;padding:20px}
   .hdr{border-bottom:2px solid var(--bdr);padding-bottom:14px;margin-bottom:16px}
   .hdr h1{font-size:clamp(15px,4vw,22px);font-weight:700;color:#fff;letter-spacing:-.02em}
   .hdr .sub{color:var(--mut);font-size:clamp(11px,2.5vw,13px);margin-top:4px}
-  .cw{background:var(--card);border:1px solid var(--bdr);border-radius:8px;position:relative;overflow:hidden;touch-action:none}
-  canvas{display:block;width:100%}
+
+  /* Scrollable chart wrapper */
+  .cw{background:var(--card);border:1px solid var(--bdr);border-radius:8px;position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch}
+  .ci{min-width:700px;position:relative}
+  canvas{display:block}
 
   /* Fixed info panel below chart */
   #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:8px;padding:12px 16px;min-height:80px;transition:opacity .15s}
@@ -52,7 +55,7 @@
     <h1>#66 Thunder Bunny Racing — Position Trace</h1>
     <div class="sub">2026 Daytona IMPC · GS Class · 106 Laps</div>
   </div>
-  <div class="cw"><canvas id="c"></canvas></div>
+  <div class="cw" id="cw"><div class="ci" id="ci"><canvas id="c"></canvas></div></div>
   <div class="nav">
     <button id="bprev">◀ Prev Lap</button>
     <button id="bnext">Next Lap ▶</button>
@@ -91,14 +94,16 @@ const SC=[{s:1,c:"#4472C4"},{s:2,c:"#CC0000"},{s:3,c:"#548235"},{s:4,c:"#7030A0"
 const ss=document.getElementById('ss');
 SC.forEach(sm=>{const ls=D.filter(d=>d.s===sm.s);const w=(ls.length/106*100).toFixed(1);const pI=ls[0].p,pO=ls[ls.length-1].p;const dr=ls[0].dr==="Allen Patten"?"Patten":"Estep";const t=document.createElement('div');t.className='st';t.style.width=w+'%';t.style.background=sm.c;t.style.opacity='0.88';t.innerHTML=`<div class="lb">S${sm.s} ${dr}</div><div class="ps">P${pI}→P${pO}</div>`;ss.appendChild(t);});
 
-// Canvas setup
-const cv=document.getElementById('c');const dpr=window.devicePixelRatio||1;
+// Canvas
+const cv=document.getElementById('c');const cw=document.getElementById('cw');const ci=document.getElementById('ci');
+const dpr=window.devicePixelRatio||1;
 let W,H,ML,MR,MT,MB,CW,CH;
 let activeLap=null;
 
 function resize(){
-  W=cv.parentElement.clientWidth;H=Math.min(400,Math.max(280,W*0.5));
-  ML=44;MR=16;MT=55;MB=32;CW=W-ML-MR;CH=H-MT-MB;
+  W=Math.max(700,cw.clientWidth);H=420;
+  ci.style.width=W+'px';
+  ML=50;MR=20;MT=60;MB=40;CW=W-ML-MR;CH=H-MT-MB;
   cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
 }
 function xOf(lap){return ML+(lap-1)/105*CW}
@@ -136,7 +141,7 @@ function draw(){
 
   // Settle arrows
   SET.forEach(sp=>{
-    const cx=xOf(sp.l),cy=yOf(sp.p),aL=40;c.save();
+    const cx=xOf(sp.l),cy=yOf(sp.p),aL=42;c.save();
     c.beginPath();c.strokeStyle=sp.c;c.lineWidth=1.5;c.moveTo(cx,cy-6);c.lineTo(cx,cy-aL);c.stroke();
     c.beginPath();c.fillStyle=sp.c;c.moveTo(cx,cy-4);c.lineTo(cx-3.5,cy-11);c.lineTo(cx+3.5,cy-11);c.closePath();c.fill();
     c.beginPath();c.arc(cx,cy,4,0,Math.PI*2);c.fillStyle=sp.c;c.fill();c.strokeStyle='#0b0b18';c.lineWidth=2;c.stroke();
@@ -151,29 +156,26 @@ function draw(){
   c.font='500 10px monospace';c.fillStyle='#6b6b88';c.textAlign='right';
   for(let p=1;p<=35;p+=5)c.fillText('P'+p,ML-6,yOf(p)+4);
   c.textAlign='center';
-  for(let l=1;l<=106;l+=10)c.fillText(l,xOf(l),H-MB+14);
-  c.font='500 11px system-ui';c.fillStyle='#6b6b88';c.textAlign='center';
-  c.fillText('Lap',ML+CW/2,H-2);
-  c.save();c.translate(12,MT+CH/2);c.rotate(-Math.PI/2);c.fillText('GS Position',0,0);c.restore();
+  for(let l=1;l<=106;l+=5)c.fillText(l,xOf(l),H-MB+16);
+  c.font='500 12px system-ui';c.fillStyle='#6b6b88';c.textAlign='center';
+  c.fillText('Lap',ML+CW/2,H-4);
+  c.save();c.translate(14,MT+CH/2);c.rotate(-Math.PI/2);c.fillText('GS Position',0,0);c.restore();
 
   // Crosshair + active dot
   if(activeLap!==null){
     const d=D[activeLap-1];if(!d)return;
     const ax=xOf(d.l),ay=yOf(d.p);
-    // Crosshair line
-    c.beginPath();c.strokeStyle='rgba(255,255,255,0.25)';c.lineWidth=1;c.setLineDash([2,2]);
+    c.beginPath();c.strokeStyle='rgba(255,255,255,0.3)';c.lineWidth=1;c.setLineDash([3,3]);
     c.moveTo(ax,MT);c.lineTo(ax,H-MB);c.stroke();c.setLineDash([]);
-    // Active dot
-    c.beginPath();c.arc(ax,ay,7,0,Math.PI*2);c.fillStyle='rgba(68,114,196,0.3)';c.fill();
+    c.beginPath();c.arc(ax,ay,8,0,Math.PI*2);c.fillStyle='rgba(68,114,196,0.3)';c.fill();
     c.beginPath();c.arc(ax,ay,5,0,Math.PI*2);c.fillStyle='#4472C4';c.strokeStyle='#fff';c.lineWidth=2;c.fill();c.stroke();
   }
 }
 
 function showInfo(lapNum){
-  activeLap=lapNum;
-  const d=D[lapNum-1];if(!d)return;
-  const info=document.getElementById('info');
-  info.classList.remove('empty');
+  activeLap=Math.max(1,Math.min(106,lapNum));
+  const d=D[activeLap-1];if(!d)return;
+  const info=document.getElementById('info');info.classList.remove('empty');
   const fl=d.f==='FCY'?'🟡 FCY':d.f==='FF'?'🏁 Checkered':'🟢 Green';
   const pl=d.pt?' — PIT STOP':d.ip?' — IN PIT LANE':'';
   const dc=d.d>0?'#4ade80':d.d<0?'#f87171':'#666';
@@ -187,54 +189,65 @@ function showInfo(lapNum){
   h+=`<div class="drv">${d.dr} — Stint ${d.s}</div>`;
   info.innerHTML=h;
   draw();
+  // Auto-scroll chart to keep crosshair visible
+  const ax=xOf(d.l);
+  const vl=cw.scrollLeft,vr=vl+cw.clientWidth;
+  if(ax<vl+60)cw.scrollLeft=Math.max(0,ax-80);
+  else if(ax>vr-60)cw.scrollLeft=ax-cw.clientWidth+80;
 }
 
-function clearInfo(){
-  activeLap=null;
-  const info=document.getElementById('info');
-  info.classList.add('empty');
-  info.innerHTML='<div class="hint">Drag across chart or tap a lap · Use arrows to step</div>';
-  draw();
-}
-
-// Coordinate helpers
+// Coordinate helper — accounts for scroll position inside wrapper
 function canvasX(clientX){
-  const r=cv.getBoundingClientRect();
-  return (clientX-r.left)*(W/r.width);
+  const r=cw.getBoundingClientRect();
+  return clientX-r.left+cw.scrollLeft;
 }
 
-// Mouse events (desktop)
+// Mouse (desktop)
 cv.addEventListener('mousemove',e=>{
   const x=canvasX(e.clientX);
-  const lap=Math.max(1,Math.min(106,lapOf(x)));
-  showInfo(lap);
+  showInfo(Math.max(1,Math.min(106,lapOf(x))));
 });
-cv.addEventListener('mouseleave',()=>clearInfo());
+cv.addEventListener('mouseleave',()=>{
+  activeLap=null;draw();
+  const info=document.getElementById('info');info.classList.add('empty');
+  info.innerHTML='<div class="hint">Drag across chart or tap a lap · Use arrows to step</div>';
+});
 
-// Touch events (mobile) — drag to scrub
-let touching=false;
+// Touch — drag to scrub laps, allow horizontal scroll of wrapper
+let touching=false,startX=0,startScroll=0,moved=false;
 cv.addEventListener('touchstart',e=>{
-  e.preventDefault();touching=true;
-  const x=canvasX(e.touches[0].clientX);
-  const lap=Math.max(1,Math.min(106,lapOf(x)));
-  showInfo(lap);
-},{passive:false});
+  touching=true;moved=false;
+  startX=e.touches[0].clientX;
+  startScroll=cw.scrollLeft;
+},{passive:true});
 cv.addEventListener('touchmove',e=>{
-  if(!touching)return;e.preventDefault();
-  const x=canvasX(e.touches[0].clientX);
+  if(!touching||!e.touches.length)return;
+  const tx=e.touches[0].clientX;
+  const dx=startX-tx;
+  // Scroll the wrapper
+  cw.scrollLeft=startScroll+dx;
+  // Also update the selected lap based on position in canvas
+  const x=canvasX(tx);
   const lap=Math.max(1,Math.min(106,lapOf(x)));
   showInfo(lap);
-},{passive:false});
-cv.addEventListener('touchend',()=>{touching=false;});
+  moved=true;
+},{passive:true});
+cv.addEventListener('touchend',e=>{
+  if(!moved&&touching){
+    // Tap — use the last known position
+    const ct=e.changedTouches[0];
+    const x=canvasX(ct.clientX);
+    showInfo(Math.max(1,Math.min(106,lapOf(x))));
+  }
+  touching=false;
+});
 
 // Button nav
 document.getElementById('bprev').addEventListener('click',()=>{
-  const lap=activeLap===null?1:Math.max(1,activeLap-1);
-  showInfo(lap);
+  showInfo(activeLap===null?1:Math.max(1,activeLap-1));
 });
 document.getElementById('bnext').addEventListener('click',()=>{
-  const lap=activeLap===null?1:Math.min(106,activeLap+1);
-  showInfo(lap);
+  showInfo(activeLap===null?1:Math.min(106,activeLap+1));
 });
 
 // Init
