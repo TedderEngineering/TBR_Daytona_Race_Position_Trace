@@ -208,9 +208,7 @@ cv.addEventListener('mousemove',e=>{
   showInfo(Math.max(1,Math.min(106,lapOf(x))));
 });
 cv.addEventListener('mouseleave',()=>{
-  activeLap=null;draw();
-  const info=document.getElementById('info');info.classList.add('empty');
-  info.innerHTML='<div class="hint">Drag across chart or tap a lap · Use arrows to step</div>';
+  draw();
 });
 
 // Touch — drag to scrub laps, allow horizontal scroll of wrapper
