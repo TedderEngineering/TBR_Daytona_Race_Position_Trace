@@ -19,7 +19,7 @@
   canvas{display:block}
 
   /* Fixed info panel below chart */
-  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:8px;padding:12px 16px;min-height:80px;transition:opacity .15s}
+  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:8px;padding:12px 16px;height:210px;overflow-y:auto;transition:opacity .15s}
   #info.empty{opacity:.4}
   #info .row1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
   #info .lap{font-weight:700;font-size:clamp(16px,4vw,20px);font-family:monospace;color:#fff}
@@ -46,7 +46,7 @@
   .st .lb{font-size:clamp(8px,2vw,10px);font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .st .ps{font-size:clamp(7px,1.8vw,9px);color:rgba(255,255,255,.65);font-family:monospace}
   .fn{margin-top:12px;padding:8px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:clamp(9px,2.2vw,11px);color:var(--dim);line-height:1.7}
-  @media(max-width:640px){.ctr{padding:12px 8px}}
+  @media(max-width:640px){.ctr{padding:12px 8px}#info{height:240px}}
 </style>
 </head>
 <body>
@@ -246,6 +246,12 @@ document.getElementById('bprev').addEventListener('click',()=>{
 });
 document.getElementById('bnext').addEventListener('click',()=>{
   showInfo(activeLap===null?1:Math.min(106,activeLap+1));
+});
+
+// Keyboard nav (arrow keys)
+document.addEventListener('keydown',e=>{
+  if(e.key==='ArrowLeft'){e.preventDefault();showInfo(activeLap===null?1:Math.max(1,activeLap-1));}
+  else if(e.key==='ArrowRight'){e.preventDefault();showInfo(activeLap===null?1:Math.min(106,activeLap+1));}
 });
 
 // Init
