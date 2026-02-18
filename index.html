@@ -2,67 +2,85 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>#66 TBR Position Trace</title>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   :root{--bg:#0b0b18;--card:#12122a;--bdr:#1e1e38;--txt:#e0e0e8;--mut:#6b6b88;--dim:#44445a}
-  body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased}
+  body{background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;overflow-x:hidden}
   .ctr{max-width:1100px;margin:0 auto;padding:20px}
   .hdr{border-bottom:2px solid var(--bdr);padding-bottom:14px;margin-bottom:16px}
   .hdr h1{font-size:clamp(15px,4vw,22px);font-weight:700;color:#fff;letter-spacing:-.02em}
   .hdr .sub{color:var(--mut);font-size:clamp(11px,2.5vw,13px);margin-top:4px}
-  .cw{background:var(--card);border:1px solid var(--bdr);border-radius:8px;position:relative;overflow-x:auto;-webkit-overflow-scrolling:touch}
-  .ci{min-width:700px;position:relative}
-  canvas{display:block}
-  #tt{display:none;position:fixed;z-index:100;background:var(--card);border:1px solid #333;border-radius:8px;padding:10px 14px;color:var(--txt);font-size:12px;line-height:1.5;max-width:340px;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.5)}
-  .th{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
-  .tl{font-weight:700;font-size:15px;font-family:monospace}.tp{font-size:14px;font-weight:700;color:#fff;font-family:monospace}
-  .tf{color:var(--mut);margin-bottom:4px}.td{font-weight:700;font-size:13px;margin-bottom:6px}
-  .tr{background:#1a1a35;border-radius:4px;padding:6px 8px;margin-bottom:6px;font-size:11px;color:#ccc}
-  .tpc{border-top:1px solid var(--bdr);padding-top:6px;margin-top:2px}
-  .tpr{display:flex;justify-content:space-between;font-size:11px;color:#aaa}.tpr b{color:#fff;font-family:monospace;font-weight:600}
-  .tpd{font-size:11px;font-weight:600;margin-top:2px}.tdr{color:var(--dim);font-size:10px;margin-top:6px}
-  .leg{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px;padding:10px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:11px}
-  .li{display:flex;align-items:center;gap:5px;color:var(--mut)}
-  .ss{display:flex;gap:2px;margin-top:16px;border-radius:6px;overflow:hidden}
+  .cw{background:var(--card);border:1px solid var(--bdr);border-radius:8px;position:relative;overflow:hidden;touch-action:none}
+  canvas{display:block;width:100%}
+
+  /* Fixed info panel below chart */
+  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:8px;padding:12px 16px;min-height:80px;transition:opacity .15s}
+  #info.empty{opacity:.4}
+  #info .row1{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px}
+  #info .lap{font-weight:700;font-size:clamp(16px,4vw,20px);font-family:monospace;color:#fff}
+  #info .pos{font-weight:700;font-size:clamp(16px,4vw,20px);font-family:monospace;color:#fff}
+  #info .flag{color:var(--mut);font-size:clamp(11px,2.8vw,13px);margin-bottom:4px}
+  #info .delta{font-weight:700;font-size:clamp(13px,3vw,15px);margin-bottom:6px}
+  #info .reason{background:#1a1a35;border-radius:4px;padding:6px 10px;margin-bottom:6px;font-size:clamp(11px,2.8vw,13px);color:#ccc;line-height:1.4}
+  #info .pace{border-top:1px solid var(--bdr);padding-top:6px;margin-top:4px}
+  #info .pace-row{display:flex;justify-content:space-between;font-size:clamp(11px,2.8vw,13px);color:#aaa}
+  #info .pace-row b{color:#fff;font-family:monospace;font-weight:600}
+  #info .pace-d{font-size:clamp(11px,2.8vw,13px);font-weight:600;margin-top:2px}
+  #info .drv{color:var(--dim);font-size:clamp(10px,2.5vw,12px);margin-top:6px}
+  #info .hint{color:var(--dim);font-size:clamp(11px,2.5vw,13px);text-align:center;padding:12px 0}
+
+  /* Nav buttons */
+  .nav{display:flex;gap:6px;margin-top:8px}
+  .nav button{flex:1;padding:10px;border:1px solid var(--bdr);border-radius:6px;background:var(--card);color:var(--txt);font-size:14px;font-weight:600;cursor:pointer;touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+  .nav button:active{background:#1f1f3a}
+
+  .leg{display:flex;flex-wrap:wrap;gap:10px;margin-top:12px;padding:10px 14px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:clamp(9px,2.2vw,11px)}
+  .li{display:flex;align-items:center;gap:4px;color:var(--mut)}
+  .ss{display:flex;gap:2px;margin-top:12px;border-radius:6px;overflow:hidden}
   .st{text-align:center;padding:6px 2px;min-width:0;overflow:hidden}
   .st .lb{font-size:clamp(8px,2vw,10px);font-weight:700;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .st .ps{font-size:clamp(7px,1.8vw,9px);color:rgba(255,255,255,.65);font-family:monospace}
-  .fn{margin-top:16px;padding:8px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:11px;color:var(--dim);line-height:1.7}
-  @media(max-width:640px){.ctr{padding:12px 8px}.leg{gap:8px;padding:8px 10px;font-size:10px}.fn{font-size:10px}#tt{font-size:11px;max-width:280px}}
+  .fn{margin-top:12px;padding:8px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:clamp(9px,2.2vw,11px);color:var(--dim);line-height:1.7}
+  @media(max-width:640px){.ctr{padding:12px 8px}}
 </style>
 </head>
 <body>
 <div class="ctr">
   <div class="hdr">
     <h1>#66 Thunder Bunny Racing — Position Trace</h1>
-    <div class="sub">2026 Daytona IMPC · GS Class · 106 Laps · Tap/hover for details</div>
+    <div class="sub">2026 Daytona IMPC · GS Class · 106 Laps</div>
   </div>
-  <div class="cw"><div class="ci"><canvas id="c"></canvas></div></div>
+  <div class="cw"><canvas id="c"></canvas></div>
+  <div class="nav">
+    <button id="bprev">◀ Prev Lap</button>
+    <button id="bnext">Next Lap ▶</button>
+  </div>
+  <div id="info"><div class="hint">Drag across chart or tap a lap · Use arrows to step</div></div>
   <div class="leg">
-    <div class="li"><div style="width:20px;height:10px;background:#fbbf24;opacity:.2;border-radius:2px"></div>FCY</div>
-    <div class="li"><div style="width:8px;height:8px;border-radius:50%;background:#fbbf24;border:1px solid #000"></div>Pit / In Pit</div>
-    <div class="li"><div style="width:20px;height:2px;background:#ef4444"></div>Penalty</div>
-    <div class="li"><div style="width:20px;height:2px;background:#f59e0b"></div>Hose (no penalty)</div>
-    <div class="li"><div style="width:20px;height:2px;background:#f97316"></div>Forced stop</div>
-    <div class="li"><div style="width:20px;height:0;border-top:2px dashed #555"></div>Normal stop</div>
-    <div class="li"><div style="width:8px;height:8px;border-radius:50%;background:#f87171;border:2px solid #0b0b18"></div>Settle point</div>
+    <div class="li"><div style="width:16px;height:8px;background:#fbbf24;opacity:.2;border-radius:2px"></div>FCY</div>
+    <div class="li"><div style="width:7px;height:7px;border-radius:50%;background:#fbbf24;border:1px solid #000"></div>Pit</div>
+    <div class="li"><div style="width:16px;height:2px;background:#ef4444"></div>Penalty</div>
+    <div class="li"><div style="width:16px;height:2px;background:#f59e0b"></div>Hose (no pen.)</div>
+    <div class="li"><div style="width:16px;height:2px;background:#f97316"></div>Forced</div>
+    <div class="li"><div style="width:16px;height:0;border-top:2px dashed #555"></div>Normal</div>
+    <div class="li"><div style="width:7px;height:7px;border-radius:50%;background:#f87171;border:2px solid #0b0b18"></div>Settle</div>
   </div>
   <div class="ss" id="ss"></div>
   <div class="fn">
-    * Stop 4 (L50): Driver released early with fuel hose still attached — same violation as Stop 1 but not caught by race officials. No penalty issued.<br>
-    Stop 5 (L68): DT penalty given for crew over wall before car stops. Served at Stop 6 (L72).<br>
-    BMW field average excludes #66. Only green-flag laps under 2:10 included in average calculation.
+    * Stop 4 (L50): Driver released early with fuel hose still attached — same violation as Stop 1 but not caught by officials.<br>
+    Stop 5 (L68): DT penalty for crew over wall. Served at Stop 6 (L72).<br>
+    BMW field avg excludes #66. Green-flag laps under 2:10 only.
   </div>
 </div>
-<div id="tt"></div>
+
 <script>
 const D=[{l:1,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:2,p:17,d:-1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:3,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:4,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:5,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:6,p:16,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:7,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:8,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:9,p:18,d:-2,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:10,p:18,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:11,p:18,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:12,p:17,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:13,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:14,p:16,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:15,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:16,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:17,p:15,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:18,p:15,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:1},{l:19,p:15,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:1},{l:20,p:15,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:1},{l:21,p:7,d:8,f:"FCY",pt:0,ip:1,dr:"Allen Patten",s:1},{l:22,p:12,d:-5,f:"FCY",pt:1,ip:0,dr:"Allen Patten",s:2},{l:23,p:12,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:2},{l:24,p:12,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:2},{l:25,p:12,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:2},{l:26,p:17,d:-5,f:"FCY",pt:0,ip:1,dr:"Allen Patten",s:2},{l:27,p:29,d:-12,f:"FCY",pt:1,ip:0,dr:"Allen Patten",s:2},{l:28,p:30,d:-1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:2},{l:29,p:23,d:7,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:2},{l:30,p:22,d:1,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:2},{l:31,p:22,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:2},{l:32,p:22,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:2},{l:33,p:32,d:-10,f:"GF",pt:0,ip:1,dr:"Allen Patten",s:2},{l:34,p:31,d:1,f:"GF",pt:1,ip:0,dr:"Allen Patten",s:2},{l:35,p:31,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:36,p:31,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:37,p:31,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:38,p:31,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:39,p:30,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:40,p:30,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:41,p:28,d:2,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:42,p:27,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:43,p:26,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:44,p:25,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:45,p:24,d:1,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:46,p:24,d:0,f:"GF",pt:0,ip:0,dr:"Allen Patten",s:3},{l:47,p:23,d:1,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:3},{l:48,p:23,d:0,f:"FCY",pt:0,ip:0,dr:"Allen Patten",s:3},{l:49,p:16,d:7,f:"FCY",pt:0,ip:1,dr:"Allen Patten",s:3},{l:50,p:23,d:-7,f:"FCY",pt:1,ip:0,dr:"Trenton Estep",s:3},{l:51,p:23,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:52,p:23,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:53,p:18,d:5,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:54,p:18,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:55,p:18,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:56,p:17,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:57,p:15,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:58,p:14,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:59,p:14,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:60,p:14,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:61,p:15,d:-1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:62,p:16,d:-1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:63,p:15,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:64,p:13,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:65,p:13,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:66,p:13,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:4},{l:67,p:9,d:4,f:"FCY",pt:0,ip:1,dr:"Trenton Estep",s:4},{l:68,p:24,d:-15,f:"FCY",pt:1,ip:0,dr:"Trenton Estep",s:4},{l:69,p:23,d:1,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:5},{l:70,p:20,d:3,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:5},{l:71,p:28,d:-8,f:"GF",pt:0,ip:1,dr:"Trenton Estep",s:5},{l:72,p:27,d:1,f:"FCY",pt:1,ip:0,dr:"Trenton Estep",s:5},{l:73,p:27,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:74,p:27,d:0,f:"FCY",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:75,p:26,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:76,p:19,d:7,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:77,p:17,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:78,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:79,p:16,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:80,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:81,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:82,p:13,d:3,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:83,p:10,d:3,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:6},{l:84,p:8,d:2,f:"GF",pt:0,ip:1,dr:"Trenton Estep",s:6},{l:85,p:22,d:-14,f:"GF",pt:1,ip:0,dr:"Trenton Estep",s:6},{l:86,p:20,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:87,p:18,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:88,p:18,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:89,p:17,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:90,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:91,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:92,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:93,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:94,p:18,d:-1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:95,p:18,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:96,p:18,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:97,p:16,d:2,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:98,p:17,d:-1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:99,p:17,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:100,p:16,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:101,p:15,d:1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:102,p:15,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:103,p:16,d:-1,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:104,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:105,p:16,d:0,f:"GF",pt:0,ip:0,dr:"Trenton Estep",s:7},{l:106,p:16,d:0,f:"FF",pt:0,ip:0,dr:"Trenton Estep",s:7}];
 
 const R={2:"Lost to #92 Hays on pace",6:"Gained — #8 Fitzpatrick stopped on course T3",9:"Lost to #54 Chaves and #95 Machavern on pace",12:"Gained — #54 Chaves flat tire, pitted P15→P34",14:"Gained — #12 Choksey mechanical black flag, P5→P18",17:"Gained — on-pace pass on #19 Quinlan (fading)",21:"Pit cycle — entering pit lane, 8 cars ahead also pitting",22:"Stop 1: Driver released early, hose still attached. Short fill. 5 cars exited faster",26:"Entering pit for Stop 2. 5 cars gain 1 pos each",27:"Stop 2: Completing refuel from botched Stop 1. 11 cars pass stationary #66",28:"Settling from pit exits — #60, #64 gain positions",29:"Pit cycle — 2nd wave pitting (#27, #37, #4, #8, #54)",30:"Pit cycle — #30 Thomson settling from exit",33:"Entering pit for DT. 7 cars gain as #66 drops in",34:"DT served (0:45.2). #24 Murillo pits same lap — swap",39:"Gained — #4 Medusa pitted (0:48.4)",41:"Gained — on-pace pass #22 Tomlinson; #38 Tan pitted",42:"Gained — #92 Hays pitted (late W1 cycle)",43:"Gained — on-pace pass #8 Stadtlander",44:"Gained — on-pace pass #10 Sloss",45:"Gained — #39 McAlister pitted (green-flag stop)",47:"Pit cycle — FCY, 1 pos gained in reorder",49:"Pit cycle — entering pit for Stop 4 (driver change)",50:"Stop 4: Driver change Patten→Estep. Hose still attached — NOT caught by officials",53:"Gained 5 — #91 dropped 13, #17 dropped 11, #54 DT; #67 on-pace pass",56:"Gained — on-pace pass #23 Bell",57:"Gained 2 — #37 Shields pitted; #60 Skeen dropped 6",58:"Gained — #44 Cooper dropped 5 pos",61:"Lost to #23 Bell on pace (repassed)",62:"Lost to #92 Megennis on pace",63:"Gained — re-passed #92 Megennis on pace",64:"Gained 2 — #23 Bell pitted (fight over)",67:"Pit cycle — entering pit for Stop 5",68:"Stop 5: 1:55.5 service. DT penalty — crew over wall",69:"Pit cycle — FCY reorder settling",70:"Pit cycle — settling from pit exits",71:"Entering pit for Stop 6",72:"Stop 6: DT served",75:"Pit cycle — FCY reorder",76:"Pit cycle — #37, #54, #60 pitting (final window)",77:"Gained 2 — #38 Auberlen pitted; on-pace pass #4 Corry",79:"Gained — on-pace pass #44 Cooper",82:"Pit cycle — #27 McAleer, #83 Pumpelly pitting",83:"Pit cycle — #14, #2, #57 pitting (final window)",84:"Pit cycle — #71 (leader!), #13, #46, #26 pitting",85:"Stop 7: Clean stop. 1:26.3 service",86:"Pit cycle — settling from final window exits",87:"Pit cycle — #64 TeamTGM, #67 BSI pitting",89:"Pit cycle — #38 very late final stop",94:"Lost to #24 Murillo on pace",97:"Pit cycle — #22 Shopify pitted",98:"Lost to #44 Cooper on pace",100:"Pit cycle — #83 Pumpelly pitted",101:"Gained — #44 Cooper faded, dropped 3 pos",103:"Lost to #30 Williams on pace"};
 
-const P={"1":{"lt":"2:03.78","avg":"2:05.05","d":-1.27},"2":{"lt":"1:57.83","avg":"1:57.53","d":0.3},"3":{"lt":"1:56.05","avg":"1:56.50","d":-0.45},"4":{"lt":"1:55.44","avg":"1:57.05","d":-1.61},"5":{"lt":"1:56.01","avg":"1:56.47","d":-0.45},"6":{"lt":"1:56.94","avg":"1:57.18","d":-0.24},"7":{"lt":"1:56.12","avg":"1:56.35","d":-0.22},"8":{"lt":"1:56.71","avg":"1:56.51","d":0.2},"9":{"lt":"1:57.69","avg":"1:56.85","d":0.84},"10":{"lt":"1:56.11","avg":"1:56.84","d":-0.73},"11":{"lt":"1:56.50","avg":"1:57.32","d":-0.82},"12":{"lt":"1:56.49","avg":"1:57.31","d":-0.82},"13":{"lt":"1:57.35","avg":"1:57.15","d":0.2},"14":{"lt":"1:57.12","avg":"1:57.27","d":-0.15},"15":{"lt":"1:56.93","avg":"1:57.28","d":-0.35},"16":{"lt":"1:57.51","avg":"1:57.14","d":0.37},"17":{"lt":"1:56.97","avg":"1:57.27","d":-0.31},"18":{"lt":"1:56.37","avg":"1:57.20","d":-0.83},"19":{"lt":"1:57.10","avg":"1:58.29","d":-1.19},"29":{"lt":"2:01.75","avg":"2:01.77","d":-0.02},"30":{"lt":"2:05.48","avg":"2:02.07","d":3.42},"35":{"lt":"1:56.89","avg":"1:55.98","d":0.91},"36":{"lt":"1:56.10","avg":"1:56.15","d":-0.05},"37":{"lt":"1:55.78","avg":"1:55.99","d":-0.22},"38":{"lt":"1:56.40","avg":"1:56.20","d":0.2},"39":{"lt":"1:56.05","avg":"1:56.86","d":-0.81},"40":{"lt":"1:57.43","avg":"1:56.27","d":1.16},"41":{"lt":"1:56.63","avg":"1:56.45","d":0.18},"42":{"lt":"1:56.63","avg":"1:56.56","d":0.07},"43":{"lt":"1:56.73","avg":"1:57.05","d":-0.31},"44":{"lt":"1:57.09","avg":"1:56.67","d":0.42},"45":{"lt":"1:56.60","avg":"1:56.81","d":-0.2},"46":{"lt":"1:56.76","avg":"1:56.98","d":-0.22},"47":{"lt":"1:58.87","avg":"2:00.94","d":-2.07},"53":{"lt":"1:57.80","avg":"1:56.90","d":0.89},"57":{"lt":"1:57.13","avg":"1:56.56","d":0.57},"58":{"lt":"1:55.02","avg":"1:55.17","d":-0.15},"59":{"lt":"1:54.61","avg":"1:55.43","d":-0.83},"60":{"lt":"1:55.28","avg":"1:54.98","d":0.3},"61":{"lt":"1:56.27","avg":"1:55.44","d":0.83},"62":{"lt":"1:56.20","avg":"1:55.45","d":0.75},"63":{"lt":"1:55.07","avg":"1:55.50","d":-0.42},"64":{"lt":"1:55.76","avg":"1:55.60","d":0.16},"65":{"lt":"1:55.91","avg":"1:56.03","d":-0.12},"76":{"lt":"1:57.08","avg":"1:58.22","d":-1.14},"77":{"lt":"1:55.81","avg":"1:55.30","d":0.51},"78":{"lt":"1:55.34","avg":"1:55.02","d":0.32},"79":{"lt":"1:55.05","avg":"1:55.04","d":0.01},"80":{"lt":"1:55.57","avg":"1:55.11","d":0.46},"81":{"lt":"1:55.09","avg":"1:57.49","d":-2.39},"82":{"lt":"1:55.42","avg":"1:58.65","d":-3.23},"83":{"lt":"1:55.96","avg":"1:55.62","d":0.34},"84":{"lt":"2:08.63","avg":"1:58.01","d":10.62},"86":{"lt":"1:55.84","avg":"1:55.35","d":0.49},"87":{"lt":"1:56.03","avg":"1:55.62","d":0.41},"88":{"lt":"1:56.36","avg":"1:57.55","d":-1.19},"89":{"lt":"1:56.68","avg":"1:55.36","d":1.32},"90":{"lt":"1:56.24","avg":"1:55.46","d":0.77},"91":{"lt":"1:56.62","avg":"1:55.70","d":0.92},"92":{"lt":"1:56.41","avg":"1:55.38","d":1.04},"93":{"lt":"1:56.19","avg":"1:55.33","d":0.87},"94":{"lt":"1:56.20","avg":"1:55.51","d":0.7},"95":{"lt":"1:56.10","avg":"1:55.78","d":0.32},"96":{"lt":"1:56.46","avg":"1:56.00","d":0.46},"97":{"lt":"1:56.18","avg":"1:55.81","d":0.38},"98":{"lt":"1:56.96","avg":"1:55.96","d":1.0},"99":{"lt":"1:56.80","avg":"1:55.96","d":0.84},"100":{"lt":"1:56.96","avg":"1:56.01","d":0.95},"101":{"lt":"1:56.95","avg":"1:56.33","d":0.62},"102":{"lt":"1:57.36","avg":"1:56.44","d":0.92},"103":{"lt":"1:57.43","avg":"1:56.49","d":0.93},"104":{"lt":"1:58.00","avg":"1:56.04","d":1.96},"105":{"lt":"1:57.12","avg":"1:56.23","d":0.89},"106":{"lt":"1:56.90","avg":"1:56.79","d":0.1}};
+const PA={"1":{"lt":"2:03.78","avg":"2:05.05","d":-1.27},"2":{"lt":"1:57.83","avg":"1:57.53","d":0.3},"3":{"lt":"1:56.05","avg":"1:56.50","d":-0.45},"4":{"lt":"1:55.44","avg":"1:57.05","d":-1.61},"5":{"lt":"1:56.01","avg":"1:56.47","d":-0.45},"6":{"lt":"1:56.94","avg":"1:57.18","d":-0.24},"7":{"lt":"1:56.12","avg":"1:56.35","d":-0.22},"8":{"lt":"1:56.71","avg":"1:56.51","d":0.2},"9":{"lt":"1:57.69","avg":"1:56.85","d":0.84},"10":{"lt":"1:56.11","avg":"1:56.84","d":-0.73},"11":{"lt":"1:56.50","avg":"1:57.32","d":-0.82},"12":{"lt":"1:56.49","avg":"1:57.31","d":-0.82},"13":{"lt":"1:57.35","avg":"1:57.15","d":0.2},"14":{"lt":"1:57.12","avg":"1:57.27","d":-0.15},"15":{"lt":"1:56.93","avg":"1:57.28","d":-0.35},"16":{"lt":"1:57.51","avg":"1:57.14","d":0.37},"17":{"lt":"1:56.97","avg":"1:57.27","d":-0.31},"18":{"lt":"1:56.37","avg":"1:57.20","d":-0.83},"19":{"lt":"1:57.10","avg":"1:58.29","d":-1.19},"29":{"lt":"2:01.75","avg":"2:01.77","d":-0.02},"30":{"lt":"2:05.48","avg":"2:02.07","d":3.42},"35":{"lt":"1:56.89","avg":"1:55.98","d":0.91},"36":{"lt":"1:56.10","avg":"1:56.15","d":-0.05},"37":{"lt":"1:55.78","avg":"1:55.99","d":-0.22},"38":{"lt":"1:56.40","avg":"1:56.20","d":0.2},"39":{"lt":"1:56.05","avg":"1:56.86","d":-0.81},"40":{"lt":"1:57.43","avg":"1:56.27","d":1.16},"41":{"lt":"1:56.63","avg":"1:56.45","d":0.18},"42":{"lt":"1:56.63","avg":"1:56.56","d":0.07},"43":{"lt":"1:56.73","avg":"1:57.05","d":-0.31},"44":{"lt":"1:57.09","avg":"1:56.67","d":0.42},"45":{"lt":"1:56.60","avg":"1:56.81","d":-0.2},"46":{"lt":"1:56.76","avg":"1:56.98","d":-0.22},"47":{"lt":"1:58.87","avg":"2:00.94","d":-2.07},"53":{"lt":"1:57.80","avg":"1:56.90","d":0.89},"57":{"lt":"1:57.13","avg":"1:56.56","d":0.57},"58":{"lt":"1:55.02","avg":"1:55.17","d":-0.15},"59":{"lt":"1:54.61","avg":"1:55.43","d":-0.83},"60":{"lt":"1:55.28","avg":"1:54.98","d":0.3},"61":{"lt":"1:56.27","avg":"1:55.44","d":0.83},"62":{"lt":"1:56.20","avg":"1:55.45","d":0.75},"63":{"lt":"1:55.07","avg":"1:55.50","d":-0.42},"64":{"lt":"1:55.76","avg":"1:55.60","d":0.16},"65":{"lt":"1:55.91","avg":"1:56.03","d":-0.12},"76":{"lt":"1:57.08","avg":"1:58.22","d":-1.14},"77":{"lt":"1:55.81","avg":"1:55.30","d":0.51},"78":{"lt":"1:55.34","avg":"1:55.02","d":0.32},"79":{"lt":"1:55.05","avg":"1:55.04","d":0.01},"80":{"lt":"1:55.57","avg":"1:55.11","d":0.46},"81":{"lt":"1:55.09","avg":"1:57.49","d":-2.39},"82":{"lt":"1:55.42","avg":"1:58.65","d":-3.23},"83":{"lt":"1:55.96","avg":"1:55.62","d":0.34},"84":{"lt":"2:08.63","avg":"1:58.01","d":10.62},"86":{"lt":"1:55.84","avg":"1:55.35","d":0.49},"87":{"lt":"1:56.03","avg":"1:55.62","d":0.41},"88":{"lt":"1:56.36","avg":"1:57.55","d":-1.19},"89":{"lt":"1:56.68","avg":"1:55.36","d":1.32},"90":{"lt":"1:56.24","avg":"1:55.46","d":0.77},"91":{"lt":"1:56.62","avg":"1:55.70","d":0.92},"92":{"lt":"1:56.41","avg":"1:55.38","d":1.04},"93":{"lt":"1:56.19","avg":"1:55.33","d":0.87},"94":{"lt":"1:56.20","avg":"1:55.51","d":0.7},"95":{"lt":"1:56.10","avg":"1:55.78","d":0.32},"96":{"lt":"1:56.46","avg":"1:56.00","d":0.46},"97":{"lt":"1:56.18","avg":"1:55.81","d":0.38},"98":{"lt":"1:56.96","avg":"1:55.96","d":1.0},"99":{"lt":"1:56.80","avg":"1:55.96","d":0.84},"100":{"lt":"1:56.96","avg":"1:56.01","d":0.95},"101":{"lt":"1:56.95","avg":"1:56.33","d":0.62},"102":{"lt":"1:57.36","avg":"1:56.44","d":0.92},"103":{"lt":"1:57.43","avg":"1:56.49","d":0.93},"104":{"lt":"1:58.00","avg":"1:56.04","d":1.96},"105":{"lt":"1:57.12","avg":"1:56.23","d":0.89},"106":{"lt":"1:56.90","avg":"1:56.79","d":0.1}};
 
 const FCY=[[19,27],[30,31],[47,51],[54,55],[66,69],[72,74]];
 const PITS=[{l:22,lb:"S1 Hose!",c:"#f87171",yo:0},{l:27,lb:"S2 Refuel",c:"#fb923c",yo:14},{l:34,lb:"DT Served",c:"#f87171",yo:0},{l:50,lb:"S4 Hose!*",c:"#fbbf24",yo:0},{l:68,lb:"S5 DT given",c:"#f87171",yo:0},{l:72,lb:"S6 DT served",c:"#f87171",yo:14},{l:85,lb:"S7 Clean",c:"#888",da:1}];
@@ -73,21 +91,22 @@ const SC=[{s:1,c:"#4472C4"},{s:2,c:"#CC0000"},{s:3,c:"#548235"},{s:4,c:"#7030A0"
 const ss=document.getElementById('ss');
 SC.forEach(sm=>{const ls=D.filter(d=>d.s===sm.s);const w=(ls.length/106*100).toFixed(1);const pI=ls[0].p,pO=ls[ls.length-1].p;const dr=ls[0].dr==="Allen Patten"?"Patten":"Estep";const t=document.createElement('div');t.className='st';t.style.width=w+'%';t.style.background=sm.c;t.style.opacity='0.88';t.innerHTML=`<div class="lb">S${sm.s} ${dr}</div><div class="ps">P${pI}→P${pO}</div>`;ss.appendChild(t);});
 
-// Canvas
+// Canvas setup
 const cv=document.getElementById('c');const dpr=window.devicePixelRatio||1;
-const ci=cv.parentElement;
 let W,H,ML,MR,MT,MB,CW,CH;
+let activeLap=null;
 
 function resize(){
-  W=Math.max(700,ci.clientWidth);H=420;
-  ML=50;MR=20;MT=60;MB=40;CW=W-ML-MR;CH=H-MT-MB;
+  W=cv.parentElement.clientWidth;H=Math.min(400,Math.max(280,W*0.5));
+  ML=44;MR=16;MT=55;MB=32;CW=W-ML-MR;CH=H-MT-MB;
   cv.width=W*dpr;cv.height=H*dpr;cv.style.width=W+'px';cv.style.height=H+'px';
 }
-function xOf(lap){return ML+(lap-1)/(106-1)*CW}
-function yOf(pos){return MT+(pos-1)/(35-1)*CH}
+function xOf(lap){return ML+(lap-1)/105*CW}
+function yOf(pos){return MT+(pos-1)/34*CH}
+function lapOf(x){return Math.round((x-ML)/CW*105+1)}
 
 function draw(){
-  const c=cv.getContext('2d');c.scale(dpr,dpr);c.clearRect(0,0,W,H);
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.clearRect(0,0,W,H);
 
   // Grid
   c.strokeStyle='#1e1e38';c.lineWidth=0.5;
@@ -112,12 +131,12 @@ function draw(){
   D.forEach((d,i)=>{
     const x=xOf(d.l),y=yOf(d.p);
     if(i===0)c.moveTo(x,y);
-    else{const px=xOf(D[i-1].l);c.lineTo(x,yOf(D[i-1].p));c.lineTo(x,y);}
+    else{c.lineTo(x,yOf(D[i-1].p));c.lineTo(x,y);}
   });c.stroke();
 
   // Settle arrows
   SET.forEach(sp=>{
-    const cx=xOf(sp.l),cy=yOf(sp.p),aL=42;c.save();
+    const cx=xOf(sp.l),cy=yOf(sp.p),aL=40;c.save();
     c.beginPath();c.strokeStyle=sp.c;c.lineWidth=1.5;c.moveTo(cx,cy-6);c.lineTo(cx,cy-aL);c.stroke();
     c.beginPath();c.fillStyle=sp.c;c.moveTo(cx,cy-4);c.lineTo(cx-3.5,cy-11);c.lineTo(cx+3.5,cy-11);c.closePath();c.fill();
     c.beginPath();c.arc(cx,cy,4,0,Math.PI*2);c.fillStyle=sp.c;c.fill();c.strokeStyle='#0b0b18';c.lineWidth=2;c.stroke();
@@ -130,48 +149,97 @@ function draw(){
 
   // Axes labels
   c.font='500 10px monospace';c.fillStyle='#6b6b88';c.textAlign='right';
-  for(let p=1;p<=35;p+=5){c.fillText('P'+p,ML-6,yOf(p)+4);}
+  for(let p=1;p<=35;p+=5)c.fillText('P'+p,ML-6,yOf(p)+4);
   c.textAlign='center';
-  for(let l=1;l<=106;l+=5){c.fillText(l,xOf(l),H-MB+16);}
-  c.font='500 12px system-ui';c.fillStyle='#6b6b88';c.textAlign='center';
-  c.fillText('Lap',ML+CW/2,H-4);
-  c.save();c.translate(14,MT+CH/2);c.rotate(-Math.PI/2);c.fillText('GS Position',0,0);c.restore();
+  for(let l=1;l<=106;l+=10)c.fillText(l,xOf(l),H-MB+14);
+  c.font='500 11px system-ui';c.fillStyle='#6b6b88';c.textAlign='center';
+  c.fillText('Lap',ML+CW/2,H-2);
+  c.save();c.translate(12,MT+CH/2);c.rotate(-Math.PI/2);c.fillText('GS Position',0,0);c.restore();
+
+  // Crosshair + active dot
+  if(activeLap!==null){
+    const d=D[activeLap-1];if(!d)return;
+    const ax=xOf(d.l),ay=yOf(d.p);
+    // Crosshair line
+    c.beginPath();c.strokeStyle='rgba(255,255,255,0.25)';c.lineWidth=1;c.setLineDash([2,2]);
+    c.moveTo(ax,MT);c.lineTo(ax,H-MB);c.stroke();c.setLineDash([]);
+    // Active dot
+    c.beginPath();c.arc(ax,ay,7,0,Math.PI*2);c.fillStyle='rgba(68,114,196,0.3)';c.fill();
+    c.beginPath();c.arc(ax,ay,5,0,Math.PI*2);c.fillStyle='#4472C4';c.strokeStyle='#fff';c.lineWidth=2;c.fill();c.stroke();
+  }
 }
 
-resize();draw();
-window.addEventListener('resize',()=>{resize();draw();});
-
-// Tooltip
-const tt=document.getElementById('tt');
-function nearest(mx,my){
-  let best=null,bd=Infinity;
-  D.forEach(d=>{const dx=xOf(d.l)-mx,dy=yOf(d.p)-my,dist=dx*dx+dy*dy;if(dist<bd){bd=dist;best=d;}});
-  return bd<900?best:null;
-}
-function showTT(d,cx,cy){
+function showInfo(lapNum){
+  activeLap=lapNum;
+  const d=D[lapNum-1];if(!d)return;
+  const info=document.getElementById('info');
+  info.classList.remove('empty');
   const fl=d.f==='FCY'?'🟡 FCY':d.f==='FF'?'🏁 Checkered':'🟢 Green';
   const pl=d.pt?' — PIT STOP':d.ip?' — IN PIT LANE':'';
   const dc=d.d>0?'#4ade80':d.d<0?'#f87171':'#666';
   const dt=d.d>0?`▲ ${d.d} gained`:d.d<0?`▼ ${Math.abs(d.d)} lost`:'— no change';
-  const r=R[d.l],p=P[d.l];
-  let h=`<div class="th"><span class="tl">Lap ${d.l}</span><span class="tp">P${d.p}</span></div>`;
-  h+=`<div class="tf">${fl}${pl}</div><div class="td" style="color:${dc}">${dt}</div>`;
-  if(r)h+=`<div class="tr" style="border-left:3px solid ${dc}">${r}</div>`;
+  const r=R[d.l],p=PA[d.l];
+  let h=`<div class="row1"><span class="lap">Lap ${d.l}</span><span class="pos">P${d.p}</span></div>`;
+  h+=`<div class="flag">${fl}${pl}</div><div class="delta" style="color:${dc}">${dt}</div>`;
+  if(r)h+=`<div class="reason" style="border-left:3px solid ${dc}">${r}</div>`;
   if(p){const pc=p.d<=0?'#4ade80':p.d<.5?'#fbbf24':'#f87171';
-  h+=`<div class="tpc"><div class="tpr"><div>#66: <b>${p.lt}</b></div><div>BMW avg: <b>${p.avg}</b></div></div><div class="tpd" style="color:${pc}">Δ ${p.d>0?'+':''}${p.d.toFixed(2)}s vs BMW field</div></div>`;}
-  h+=`<div class="tdr">${d.dr} — Stint ${d.s}</div>`;
-  tt.innerHTML=h;tt.style.display='block';
-  const tw=tt.offsetWidth,th2=tt.offsetHeight,vw=window.innerWidth,vh=window.innerHeight;
-  let tx=cx+16,ty=cy-th2/2;
-  if(tx+tw>vw-10)tx=cx-tw-16;if(ty<10)ty=10;if(ty+th2>vh-10)ty=vh-th2-10;
-  tt.style.left=tx+'px';tt.style.top=ty+'px';
+  h+=`<div class="pace"><div class="pace-row"><div>#66: <b>${p.lt}</b></div><div>BMW avg: <b>${p.avg}</b></div></div><div class="pace-d" style="color:${pc}">Δ ${p.d>0?'+':''}${p.d.toFixed(2)}s vs BMW field</div></div>`;}
+  h+=`<div class="drv">${d.dr} — Stint ${d.s}</div>`;
+  info.innerHTML=h;
+  draw();
 }
-function getPos(e){const r=cv.getBoundingClientRect();const sx=W/cv.offsetWidth;return{x:(e.clientX-r.left)*sx,y:(e.clientY-r.top)*(H/cv.offsetHeight),cx:e.clientX,cy:e.clientY};}
 
-cv.addEventListener('mousemove',e=>{const{x,y,cx,cy}=getPos(e);const d=nearest(x,y);if(d)showTT(d,cx,cy);else tt.style.display='none';});
-cv.addEventListener('mouseleave',()=>tt.style.display='none');
-cv.addEventListener('touchstart',e=>{if(!e.touches.length)return;const t=e.touches[0];const{x,y}=getPos(t);const d=nearest(x,y);if(d)showTT(d,t.clientX,t.clientY);},{passive:true});
-cv.addEventListener('touchend',()=>setTimeout(()=>tt.style.display='none',2500));
+function clearInfo(){
+  activeLap=null;
+  const info=document.getElementById('info');
+  info.classList.add('empty');
+  info.innerHTML='<div class="hint">Drag across chart or tap a lap · Use arrows to step</div>';
+  draw();
+}
+
+// Coordinate helpers
+function canvasX(clientX){
+  const r=cv.getBoundingClientRect();
+  return (clientX-r.left)*(W/r.width);
+}
+
+// Mouse events (desktop)
+cv.addEventListener('mousemove',e=>{
+  const x=canvasX(e.clientX);
+  const lap=Math.max(1,Math.min(106,lapOf(x)));
+  showInfo(lap);
+});
+cv.addEventListener('mouseleave',()=>clearInfo());
+
+// Touch events (mobile) — drag to scrub
+let touching=false;
+cv.addEventListener('touchstart',e=>{
+  e.preventDefault();touching=true;
+  const x=canvasX(e.touches[0].clientX);
+  const lap=Math.max(1,Math.min(106,lapOf(x)));
+  showInfo(lap);
+},{passive:false});
+cv.addEventListener('touchmove',e=>{
+  if(!touching)return;e.preventDefault();
+  const x=canvasX(e.touches[0].clientX);
+  const lap=Math.max(1,Math.min(106,lapOf(x)));
+  showInfo(lap);
+},{passive:false});
+cv.addEventListener('touchend',()=>{touching=false;});
+
+// Button nav
+document.getElementById('bprev').addEventListener('click',()=>{
+  const lap=activeLap===null?1:Math.max(1,activeLap-1);
+  showInfo(lap);
+});
+document.getElementById('bnext').addEventListener('click',()=>{
+  const lap=activeLap===null?1:Math.min(106,activeLap+1);
+  showInfo(lap);
+});
+
+// Init
+resize();draw();
+window.addEventListener('resize',()=>{resize();draw();if(activeLap)showInfo(activeLap);});
 </script>
 </body>
 </html>
