@@ -46,7 +46,9 @@
   canvas{display:block}
 
   /* Info panel — horizontal layout, stable height, no scroll */
-  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:5px;padding:8px 14px;flex-shrink:0;overflow:hidden;transition:opacity .15s;min-height:68px}
+  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:5px;padding:8px 14px;flex-shrink:0;overflow:hidden;transition:opacity .15s;min-height:68px;position:relative}
+  #info .mob-nav{display:none}
+  #info .info-inner{}
   #info.empty{opacity:.4}
   #info .info-grid{display:flex;align-items:flex-start;gap:16px;min-height:0}
   #info .info-left{display:flex;align-items:baseline;gap:10px;flex-shrink:0;white-space:nowrap}
@@ -86,17 +88,35 @@
   .sel-toggle .comp-summary{color:var(--mut);font-size:11px;margin-left:12px}
 
   @media(max-width:640px){
-    .ctr{padding:0 6px 12px}
+    .ctr{padding:0 4px 0}
     .viewport{padding:0}
-    .hdr{flex-direction:column;gap:2px;padding:6px 0 4px}
-    .sel-toggle{display:block;margin-bottom:5px}
-    .sel-row{gap:6px;margin-bottom:5px;overflow:hidden;transition:max-height .25s ease,opacity .2s ease;max-height:500px;opacity:1}
+    .hdr{display:none}
+    .sel-toggle{display:block;margin-bottom:2px}
+    .sel-toggle button{padding:4px 10px;font-size:11px;border-radius:4px}
+    .sel-row{gap:6px;margin-bottom:4px;overflow:hidden;transition:max-height .25s ease,opacity .2s ease;max-height:500px;opacity:1}
     .sel-row.collapsed{max-height:0;opacity:0;margin-bottom:0;pointer-events:none}
     .sel-group{min-width:100%}
     .cmp-area{min-width:100%}
-    #info{min-height:110px}
-    #info .info-grid{flex-direction:column;gap:4px}
-    #info .info-left{flex-wrap:wrap}
+    .cw{border-radius:4px;min-height:120px}
+    .desktop-nav{display:none}
+    #info{display:flex;align-items:stretch;min-height:0;margin-top:2px;padding:0;border-radius:4px;gap:0}
+    #info .mob-nav{display:flex;align-items:center;justify-content:center;width:36px;flex-shrink:0;background:transparent;border:none;color:var(--txt);font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+    #info .mob-nav:active{background:#1f1f3a}
+    #info .mn-prev{border-right:1px solid var(--bdr)}
+    #info .mn-next{border-left:1px solid var(--bdr)}
+    #info .info-inner{flex:1;min-width:0;padding:5px 8px}
+    #info .info-grid{flex-wrap:wrap;gap:1px 10px}
+    #info .info-left{flex-wrap:wrap;gap:5px}
+    #info .info-mid{min-width:100%}
+    #info .info-right{min-width:100%}
+    #info .reason{padding:2px 8px;font-size:11px}
+    #info .drv{font-size:10px}
+    #info .hint{padding:4px 0;font-size:11px}
+    #info .lap{font-size:13px}
+    #info .pos{font-size:13px}
+    #info .delta{font-size:12px}
+    #info .flag{font-size:11px}
+    #info .pace{font-size:11px}
   }
 </style>
 </head>
@@ -130,11 +150,15 @@
   </div>
 
   <div class="cw" id="cw"><div class="ci" id="ci"><canvas id="c"></canvas></div></div>
-  <div class="nav">
+  <div class="nav desktop-nav">
     <button id="bprev">◀ Prev Lap</button>
     <button id="bnext">Next Lap ▶</button>
   </div>
-  <div id="info"><div class="hint">Tap a lap or use ◀ ▶ to step</div></div>
+  <div id="info">
+    <button class="mob-nav mn-prev" id="bprevM">◀</button>
+    <div class="info-inner"><div class="hint">Tap a lap or use ◀ ▶ to step</div></div>
+    <button class="mob-nav mn-next" id="bnextM">▶</button>
+  </div>
 </div>
 
 <div class="below-fold">
@@ -316,7 +340,8 @@ function resize(){
     ci.style.width = '100%';
   }
   ci.style.height = H + 'px';
-  ML = 50; MR = 20; MT = 60; MB = 40;
+  const mob = window.innerWidth <= 640;
+  ML = mob ? 40 : 50; MR = mob ? 10 : 20; MT = mob ? 40 : 60; MB = mob ? 30 : 40;
   CW = W - ML - MR; CH = H - MT - MB;
   cv.width = W * dpr; cv.height = H * dpr;
   cv.style.width = W + 'px'; cv.style.height = H + 'px';
@@ -501,6 +526,7 @@ function showInfo(lapNum){
 
   activeLap = lapNum;
   const info = document.getElementById('info');
+  const infoInner = info.querySelector('.info-inner');
   info.classList.remove('empty');
   const ann = getAnn();
 
@@ -554,7 +580,7 @@ function showInfo(lapNum){
   h += `<div class="info-right">${hRight}</div>`;
   h += `</div>`;
 
-  info.innerHTML = h;
+  infoInner.innerHTML = h;
   draw();
 
   // Auto-scroll chart
@@ -653,7 +679,7 @@ cv.addEventListener('touchend', e => {
 });
 
 // Buttons
-document.getElementById('bprev').addEventListener('click', () => {
+function navPrev(){
   const laps = getFocusLaps();
   if(!laps.length) return;
   const validLaps = laps.map(l => l.l);
@@ -662,8 +688,8 @@ document.getElementById('bprev').addEventListener('click', () => {
     const idx = validLaps.indexOf(activeLap);
     if(idx > 0) showInfo(validLaps[idx - 1]);
   }
-});
-document.getElementById('bnext').addEventListener('click', () => {
+}
+function navNext(){
   const laps = getFocusLaps();
   if(!laps.length) return;
   const validLaps = laps.map(l => l.l);
@@ -672,12 +698,16 @@ document.getElementById('bnext').addEventListener('click', () => {
     const idx = validLaps.indexOf(activeLap);
     if(idx < validLaps.length - 1) showInfo(validLaps[idx + 1]);
   }
-});
+}
+document.getElementById('bprev').addEventListener('click', navPrev);
+document.getElementById('bnext').addEventListener('click', navNext);
+document.getElementById('bprevM').addEventListener('click', navPrev);
+document.getElementById('bnextM').addEventListener('click', navNext);
 
 // Keyboard
 document.addEventListener('keydown', e => {
-  if(e.key === 'ArrowLeft'){ e.preventDefault(); document.getElementById('bprev').click(); }
-  else if(e.key === 'ArrowRight'){ e.preventDefault(); document.getElementById('bnext').click(); }
+  if(e.key === 'ArrowLeft'){ e.preventDefault(); navPrev(); }
+  else if(e.key === 'ArrowRight'){ e.preventDefault(); navNext(); }
 });
 
 // ── Mobile selector toggle ───────────────────────────────────────────
@@ -723,7 +753,7 @@ function rebuildAll(){
   draw();
   if(activeLap) showInfo(activeLap);
   else {
-    document.getElementById('info').innerHTML = '<div class="hint">Tap a lap or use ◀ ▶ to step</div>';
+    document.querySelector('#info .info-inner').innerHTML = '<div class="hint">Tap a lap or use ◀ ▶ to step</div>';
   }
 }
 
