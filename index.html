@@ -339,7 +339,6 @@ function resize(){
     cw.style.overflowX = 'hidden';
     ci.style.width = '100%';
   }
-  ci.style.height = H + 'px';
   const mob = window.innerWidth <= 640;
   ML = mob ? 40 : 50; MR = mob ? 10 : 20; MT = mob ? 40 : 60; MB = mob ? 30 : 40;
   CW = W - ML - MR; CH = H - MT - MB;
@@ -771,6 +770,18 @@ resize();
 rebuildAll();
 
 window.addEventListener('resize', () => { syncSelCollapse(); resize(); rebuildAll(); });
+
+// ResizeObserver catches flex layout changes that window.resize misses
+let lastCwH = 0, lastCwW = 0;
+if(window.ResizeObserver){
+  new ResizeObserver(() => {
+    const h = cw.clientHeight, w = cw.clientWidth;
+    if(h !== lastCwH || w !== lastCwW){
+      lastCwH = h; lastCwW = w;
+      resize(); rebuildAll();
+    }
+  }).observe(cw);
+}
 </script>
 </body>
 </html>
