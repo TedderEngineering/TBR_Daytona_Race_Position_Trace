@@ -99,12 +99,12 @@
     .cmp-area{min-width:100%}
     .cw{border-radius:4px;min-height:120px}
     .desktop-nav{display:none}
-    #info{display:flex;align-items:stretch;height:80px;margin-top:2px;padding:0;border-radius:4px;gap:0}
+    #info{display:flex;align-items:stretch;height:80px;overflow:hidden;margin-top:2px;padding:0;border-radius:4px;gap:0}
     #info .mob-nav{display:flex;align-items:center;justify-content:center;width:36px;flex-shrink:0;background:transparent;border:none;color:var(--txt);font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     #info .mob-nav:active{background:#1f1f3a}
     #info .mn-prev{border-right:1px solid var(--bdr)}
     #info .mn-next{border-left:1px solid var(--bdr)}
-    #info .info-inner{flex:1;min-width:0;padding:5px 8px}
+    #info .info-inner{flex:1;min-width:0;padding:5px 8px;overflow:hidden}
     #info .info-grid{flex-wrap:wrap;gap:1px 10px}
     #info .info-left{flex-wrap:wrap;gap:5px}
     #info .info-mid{min-width:100%}
@@ -771,17 +771,8 @@ rebuildAll();
 
 window.addEventListener('resize', () => { syncSelCollapse(); resize(); rebuildAll(); });
 
-// ResizeObserver catches flex layout changes that window.resize misses
-let lastCwH = 0, lastCwW = 0;
-if(window.ResizeObserver){
-  new ResizeObserver(() => {
-    const h = cw.clientHeight, w = cw.clientWidth;
-    if(Math.abs(h - lastCwH) > 5 || Math.abs(w - lastCwW) > 5){
-      lastCwH = h; lastCwW = w;
-      resize(); draw();
-    }
-  }).observe(cw);
-}
+// Delayed second resize to catch flex layout settling
+requestAnimationFrame(() => { resize(); rebuildAll(); });
 </script>
 </body>
 </html>
