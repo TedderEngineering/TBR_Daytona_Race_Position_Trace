@@ -78,11 +78,20 @@
   .st .ps{font-size:clamp(7px,1.8vw,9px);color:rgba(255,255,255,.65);font-family:monospace}
   .fn{margin-top:8px;padding:8px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;font-size:clamp(9px,2.2vw,11px);color:var(--dim);line-height:1.7}
 
+  /* Mobile selector toggle */
+  .sel-toggle{display:none;flex-shrink:0}
+  .sel-toggle button{width:100%;display:flex;justify-content:space-between;align-items:center;padding:7px 12px;background:var(--card);border:1px solid var(--bdr);border-radius:6px;color:#fff;font-size:12px;font-family:monospace;cursor:pointer;-webkit-tap-highlight-color:transparent}
+  .sel-toggle button .arrow{color:var(--mut);font-size:10px;transition:transform .2s}
+  .sel-toggle button .arrow.open{transform:rotate(180deg)}
+  .sel-toggle .comp-summary{color:var(--mut);font-size:11px;margin-left:12px}
+
   @media(max-width:640px){
     .ctr{padding:0 6px 12px}
     .viewport{padding:0}
     .hdr{flex-direction:column;gap:2px;padding:6px 0 4px}
-    .sel-row{gap:6px}
+    .sel-toggle{display:block;margin-bottom:5px}
+    .sel-row{gap:6px;margin-bottom:5px;overflow:hidden;transition:max-height .25s ease,opacity .2s ease;max-height:500px;opacity:1}
+    .sel-row.collapsed{max-height:0;opacity:0;margin-bottom:0;pointer-events:none}
     .sel-group{min-width:100%}
     .cmp-area{min-width:100%}
     #info{min-height:110px}
@@ -99,8 +108,16 @@
     <div class="sub">GS Class · 106 Laps · 35 Entries</div>
   </div>
 
+  <!-- Mobile selector toggle -->
+  <div class="sel-toggle" id="selToggle">
+    <button id="selToggleBtn">
+      <span id="selToggleLabel">#66 Thunder Bunny (BMW)</span>
+      <span><span class="comp-summary" id="compSummary"></span><span class="arrow" id="selArrow">▼</span></span>
+    </button>
+  </div>
+
   <!-- Selectors -->
-  <div class="sel-row">
+  <div class="sel-row" id="selRow">
     <div class="sel-group">
       <label>Focus Car</label>
       <select id="focusCar"></select>
@@ -200,6 +217,7 @@ function buildFocusSelect(){
     compSet.delete(focusNum);
     buildChips();
     activeLap = null;
+    if(isMobile()){ selCollapsed = true; syncSelCollapse(); }
     rebuildAll();
   });
 }
@@ -662,11 +680,46 @@ document.addEventListener('keydown', e => {
   else if(e.key === 'ArrowRight'){ e.preventDefault(); document.getElementById('bnext').click(); }
 });
 
+// ── Mobile selector toggle ───────────────────────────────────────────
+
+const selRow = document.getElementById('selRow');
+const selToggleBtn = document.getElementById('selToggleBtn');
+const selArrow = document.getElementById('selArrow');
+let selCollapsed = false;
+
+function isMobile(){ return window.innerWidth <= 640; }
+
+function syncSelCollapse(){
+  if(isMobile()){
+    selRow.classList.toggle('collapsed', selCollapsed);
+    selArrow.classList.toggle('open', !selCollapsed);
+  } else {
+    // Desktop: always show, remove collapsed
+    selRow.classList.remove('collapsed');
+  }
+}
+
+selToggleBtn.addEventListener('click', () => {
+  selCollapsed = !selCollapsed;
+  syncSelCollapse();
+  // After expand/collapse, recalc chart size after transition
+  setTimeout(() => { resize(); rebuildAll(); }, 280);
+});
+
+function updateToggleLabel(){
+  const c = DATA.cars[String(focusNum)];
+  const label = c ? `#${focusNum} ${c.team} (${c.mfr})` : `#${focusNum}`;
+  document.getElementById('selToggleLabel').textContent = label;
+  const compCount = [...compSet].filter(n => n !== focusNum).length;
+  document.getElementById('compSummary').textContent = compCount > 0 ? `vs ${compCount} cars  ` : '';
+}
+
 // ── Master rebuild ──────────────────────────────────────────────────
 
 function rebuildAll(){
   buildStintStrip();
   updateFootnote();
+  updateToggleLabel();
   draw();
   if(activeLap) showInfo(activeLap);
   else {
@@ -678,13 +731,16 @@ function rebuildAll(){
 
 (DATA.mfrGroups['BMW'] || []).forEach(n => { if(n !== focusNum) compSet.add(n); });
 
+selCollapsed = isMobile();  // Start collapsed on mobile
+syncSelCollapse();
+
 buildFocusSelect();
 buildPresets();
 buildChips();
 resize();
 rebuildAll();
 
-window.addEventListener('resize', () => { resize(); rebuildAll(); });
+window.addEventListener('resize', () => { syncSelCollapse(); resize(); rebuildAll(); });
 </script>
 </body>
 </html>
