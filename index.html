@@ -45,10 +45,10 @@
   .ci{position:relative;height:100%}
   canvas{display:block}
 
-  /* Info panel — horizontal layout, stable height, no scroll */
-  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:5px;padding:8px 14px;flex-shrink:0;overflow:hidden;transition:opacity .15s;min-height:68px;position:relative}
+  /* Info panel — fixed height prevents flex reflow jumping */
+  #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:5px;padding:8px 14px;flex-shrink:0;overflow:hidden;transition:opacity .15s;height:68px}
   #info .mob-nav{display:none}
-  #info .info-inner{}
+  #info .info-inner{height:100%;overflow:hidden}
   #info.empty{opacity:.4}
   #info .info-grid{display:flex;align-items:flex-start;gap:16px;min-height:0}
   #info .info-left{display:flex;align-items:baseline;gap:10px;flex-shrink:0;white-space:nowrap}
@@ -99,7 +99,7 @@
     .cmp-area{min-width:100%}
     .cw{border-radius:4px;min-height:120px}
     .desktop-nav{display:none}
-    #info{display:flex;align-items:stretch;min-height:0;margin-top:2px;padding:0;border-radius:4px;gap:0}
+    #info{display:flex;align-items:stretch;height:80px;margin-top:2px;padding:0;border-radius:4px;gap:0}
     #info .mob-nav{display:flex;align-items:center;justify-content:center;width:36px;flex-shrink:0;background:transparent;border:none;color:var(--txt);font-size:14px;cursor:pointer;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
     #info .mob-nav:active{background:#1f1f3a}
     #info .mn-prev{border-right:1px solid var(--bdr)}
@@ -776,9 +776,9 @@ let lastCwH = 0, lastCwW = 0;
 if(window.ResizeObserver){
   new ResizeObserver(() => {
     const h = cw.clientHeight, w = cw.clientWidth;
-    if(h !== lastCwH || w !== lastCwW){
+    if(Math.abs(h - lastCwH) > 5 || Math.abs(w - lastCwW) > 5){
       lastCwH = h; lastCwW = w;
-      resize(); rebuildAll();
+      resize(); draw();
     }
   }).observe(cw);
 }
