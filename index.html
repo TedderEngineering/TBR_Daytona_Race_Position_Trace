@@ -42,8 +42,8 @@
 
   /* Scrollable chart wrapper */
   .cw{background:var(--card);border:1px solid var(--bdr);border-radius:8px;position:relative;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;flex:1 1 0;min-height:120px}
-  .ci{position:relative;height:100%}
-  canvas{display:block;height:100%}
+  .ci{position:relative}
+  canvas{display:block}
 
   /* Info panel — fixed height prevents flex reflow jumping */
   #info{background:var(--card);border:1px solid var(--bdr);border-radius:8px;margin-top:5px;padding:8px 14px;flex-shrink:0;overflow:hidden;transition:opacity .15s;height:68px}
@@ -326,6 +326,7 @@ let W, H, ML, MR, MT, MB, CW, CH, maxLap, maxPos;
 function resize(){
   maxLap = DATA.maxLap;
   maxPos = DATA.totalGsCars;
+  const mob = window.innerWidth <= 640;
   const containerW = cw.clientWidth;
   if(containerW < 700){
     W = 700;
@@ -336,14 +337,28 @@ function resize(){
     cw.style.overflowX = 'hidden';
     ci.style.width = '100%';
   }
-  // CSS height:100% flows from flex; just read the result
-  H = Math.max(200, ci.clientHeight);
-  const mob = window.innerWidth <= 640;
+
+  // Calculate available height from viewport minus known fixed elements
+  const vh = window.innerHeight;
+  let used = 0;
+  const els = document.querySelectorAll('.viewport > *');
+  els.forEach(el => {
+    if(el === cw) return; // skip chart itself
+    const s = getComputedStyle(el);
+    if(s.display === 'none') return;
+    // For collapsed sel-row, maxHeight:0 means it takes no space
+    if(el.classList.contains('collapsed')) return;
+    used += el.offsetHeight + parseFloat(s.marginTop) + parseFloat(s.marginBottom);
+  });
+  // Account for .ctr padding and .cw own border
+  used += 10;
+  H = Math.max(200, Math.floor(vh - used));
+
+  ci.style.height = H + 'px';
   ML = mob ? 40 : 50; MR = mob ? 10 : 20; MT = mob ? 40 : 60; MB = mob ? 30 : 40;
   CW = W - ML - MR; CH = H - MT - MB;
   cv.width = W * dpr; cv.height = H * dpr;
-  cv.style.width = W + 'px';
-  // height driven by CSS height:100%, not JS
+  cv.style.width = W + 'px'; cv.style.height = H + 'px';
 }
 
 function xOf(lap){ return ML + (lap - 1) / (maxLap - 1) * CW; }
@@ -770,10 +785,6 @@ resize();
 rebuildAll();
 
 window.addEventListener('resize', () => { syncSelCollapse(); resize(); rebuildAll(); });
-
-// Re-measure after flex layout settles (varies by browser/device)
-requestAnimationFrame(() => { resize(); draw(); });
-setTimeout(() => { resize(); draw(); }, 150);
 </script>
 </body>
 </html>
